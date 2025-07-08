@@ -65,6 +65,3 @@ In Development:
 
 ## Contributing
 Contributions are welcome! Please fork the repo, create a feature branch, and submit a pull request. For major changes, open an issue to discuss your ideas first.
-
-## License
-MIT License © Chris Lemoine
