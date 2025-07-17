@@ -64,6 +64,7 @@ public class SimBot {
      */
     public void setTargetVel(double vx, double vy) {
         this.targetVelX = clamp(vx, -maxVel, maxVel);
+        this.targetVelY = clamp(vy, -maxVel, maxVel);
     }
 
     /**
@@ -83,19 +84,19 @@ public class SimBot {
         double maxDV = maxAccel * dt;
         velX += clamp(dvx, -maxDV, maxDV);
 
-        double dvy = targetVelY = velY;
-        velY += clamp(dvx, -maxDV, maxDV);
+        double dvy = targetVelY - velY;
+        velY += clamp(dvy, -maxDV, maxDV);
 
-        double dav = targetAngVel -angVel;
+        double dav = targetAngVel - angVel;
         double maxDA = maxAngAccel * dt;
         angVel += clamp(dav, -maxDA, maxDA);
 
-        double dx = velY * dt;
-        double dy = velX * dt;
+        double forward = velY * dt;
+        double strafe = velX * dt;
         double cosH = Math.cos(heading);
         double sinH = Math.sin(heading);
-        x += dx * cosH - dy * sinH;
-        y += dx * sinH +dy *cosH;
+        x += forward * cosH + strafe * sinH;
+        y += forward * sinH - strafe *cosH;
 
         heading += angVel * dt;
     }
