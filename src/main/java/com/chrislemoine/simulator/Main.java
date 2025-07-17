@@ -15,66 +15,68 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
+/**
+ * Entry point for the FTC Virtual Robot Simulator.
+ * <p>Creates the main window, shows the settings dialog,
+ * initializes the robot, input, rendering, and starts the simulation loop.</p>
+ */
 public class Main {
     public static void main(String[] args) {
-        // Create and configure the main window
+        // --- Window setup ---
         JFrame frame = new JFrame("FTC Virtual Robot Simulator");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setResizable(false);
         frame.setLocationRelativeTo(null);
 
-        // Show settings dialog
+        // --- Settings dialog ---
         SettingsDialog settings = new SettingsDialog(frame);
         settings.setVisible(true);
+        DriveMode driveMode       = settings.getSelectedDriveMode();
+        Background background     = settings.getSelectedBackground();
+        Alliance alliance         = settings.getSelectedAlliance();
 
-        DriveMode driveType   = settings.getSelectedDriveMode();
-        Background background = settings.getSelectedBackground();
-        Alliance alliance     = settings.getSelectedAlliance();
-
-        // Load the selected background so we can get its dimensions
-        BufferedImage bgImage = null;
+        // --- Determine content size based on background aspect ratio ---
+        int contentHeight = 800;
+        int contentWidth  = contentHeight;
         try {
-            bgImage = ImageIO.read(
+            BufferedImage bgImage = ImageIO.read(
                     Main.class.getResource("/background/" + background.getFilename())
             );
+            if (bgImage != null) {
+                double aspect = (double) bgImage.getWidth() / bgImage.getHeight();
+                contentWidth = (int) (contentHeight * aspect);
+            }
         } catch (Exception e) {
-            System.err.println("Could not load background for sizing: " +e.getMessage());
+            System.err.println("Warning: could not load background for sizing: " + e.getMessage());
         }
-
-        if (bgImage != null) {
-            double imgAspect = (double) bgImage.getHeight() / bgImage.getHeight();
-            int    contentH  = 800;
-            int    contentW  = (int)(contentH * imgAspect);
-
-            // Account for the window boarders & title bar
-            Insets insets = frame.getInsets();
-            frame.setSize(
-                    contentW + insets.left + insets.right,
-                    contentH + insets.top + insets.bottom
-            );
-        } else {
-            frame.setSize(800, 800);
-        }
+        // Account for window borders and title bar
+        Insets insets = frame.getInsets();
+        frame.setSize(
+                contentWidth + insets.left + insets.right,
+                contentHeight + insets.top + insets.bottom
+        );
         frame.setLocationRelativeTo(null);
 
-        // Build the robot model
+        // --- Build robot model ---
         SimBot robot = new SimBotBuilder()
                 .setStartPose(0, 0, Math.PI / 2)
                 .setConstraints(60, 60, Math.PI, Math.PI)
                 .setDimensions(17.25, 17.25)
                 .build();
 
-        KeyboardController kb = new KeyboardController(robot);
-        frame.addKeyListener(kb);
+        // --- Input controller ---
+        KeyboardController keyboardController = new KeyboardController(robot);
+        frame.addKeyListener(keyboardController);
+        frame.setFocusable(true);
+        frame.requestFocusInWindow();
 
-        // Set up the rendering panel with the chosen background
+        // --- Rendering panel ---
         FieldPanel panel = new FieldPanel(robot, background, alliance);
         frame.add(panel);
         frame.setVisible(true);
 
-        // Kick off the simulation loop
-        DriveMode mode = settings.getSelectedDriveMode();
-        Simulator sim = new Simulator(robot, panel, kb, mode);
-        sim.start();
+        // --- Start simulation loop ---
+        Simulator simulator = new Simulator(robot, panel, keyboardController, driveMode);
+        simulator.start();
     }
 }

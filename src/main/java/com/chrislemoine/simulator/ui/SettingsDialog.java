@@ -5,43 +5,43 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 
 /**
- * Modal dialog for selecting simulation settings:
- * <p> - Drive type (ROBOT_CENTRIC or FIELD_CENTRIC)</p>
- * <p> - Field background (Dark or Light)</p>
- * <p> - Alliance color (Red or Blue)</p>
- *
- * Blocks until the user clicks "Continue," then exposes the selections via getters.
+ * Settings dialog presented before simulation launch.
+ * <ul>
+ *   <li>Select <b>Drive Mode</b>: ROBOT_CENTRIC or FIELD_CENTRIC</li>
+ *   <li>Select <b>Field Background</b>: dark or light theme</li>
+ *   <li>Select <b>Alliance</b>: RED or BLUE</li>
+ * </ul>
+ * Blocks until the user confirms, then getters expose selections.
  */
 public class SettingsDialog extends JDialog {
-    private DriveMode selectedDrive = DriveMode.ROBOT_CENTRIC;
+    private DriveMode selectedDriveMode = DriveMode.ROBOT_CENTRIC;
     private Background selectedBackground = Background.FIELD_INTO_THE_DEEP_JUICE_DARK;
     private Alliance selectedAlliance = Alliance.RED;
 
     /**
-     * Constructs and displays a modal settings dialog.
-     * @param parent the parent JFrame for centering
+     * Constructs and displays the modal settings dialog.
+     * @param parent parent frame for centering and modality
      */
     public SettingsDialog(JFrame parent) {
         super(parent, "Simulator Settings", true);
-        setLayout(new BorderLayout());
-        setSize(500, 150);
+        setLayout(new BorderLayout(10, 10));
+        setSize(600, 200);
         setLocationRelativeTo(parent);
 
+        // --- Drive Mode Selection ---
+        JRadioButton robotBtn = new JRadioButton("Robot-centric", true);
+        JRadioButton fieldBtn = new JRadioButton("Field-centric");
+        ButtonGroup driveGroup = new ButtonGroup();
+        driveGroup.add(robotBtn);
+        driveGroup.add(fieldBtn);
+        JPanel drivePanel = new JPanel(new GridLayout(2, 1));
+        drivePanel.setBorder(BorderFactory.createTitledBorder("Drive Mode"));
+        drivePanel.add(robotBtn);
+        drivePanel.add(fieldBtn);
 
-        // --- DRIVE MODE PANEL ---
-        JRadioButton robotCentricBtn = new JRadioButton("Robot-centric", true);
-        JRadioButton fieldCentricBtn = new JRadioButton("Field-centric");
-        ButtonGroup modeGroup = new ButtonGroup();
-        modeGroup.add(robotCentricBtn);
-        modeGroup.add(fieldCentricBtn);
-        JPanel modePanel = new JPanel(new GridLayout(2, 1));
-        modePanel.setBorder(BorderFactory.createTitledBorder("Drive Mode"));
-        modePanel.add(robotCentricBtn);
-        modePanel.add(fieldCentricBtn);
-
-        // --- BACKGROUND OPTIONS ---
+        // --- Field Background Selection ---
         JRadioButton darkBtn = new JRadioButton("Juice Dark", true);
-        JRadioButton lightBtn = new JRadioButton("Juice light");
+        JRadioButton lightBtn = new JRadioButton("Juice Light");
         ButtonGroup bgGroup = new ButtonGroup();
         bgGroup.add(darkBtn);
         bgGroup.add(lightBtn);
@@ -50,7 +50,7 @@ public class SettingsDialog extends JDialog {
         bgPanel.add(darkBtn);
         bgPanel.add(lightBtn);
 
-        // --- ALLIANCE PANEL ---
+        // --- Alliance Selection ---
         JRadioButton redBtn = new JRadioButton("Red Alliance", true);
         JRadioButton blueBtn = new JRadioButton("Blue Alliance");
         ButtonGroup allianceGroup = new ButtonGroup();
@@ -61,17 +61,18 @@ public class SettingsDialog extends JDialog {
         alliancePanel.add(redBtn);
         alliancePanel.add(blueBtn);
 
-        // Combine both panels side by side
-        JPanel center = new JPanel(new GridLayout(1, 2, 10, 10));
-        center.add(modePanel);
+        // --- Assemble center panels in a row ---
+        JPanel center = new JPanel(new GridLayout(1, 3, 20, 10));
+        center.add(drivePanel);
         center.add(bgPanel);
         center.add(alliancePanel);
         add(center, BorderLayout.CENTER);
 
-        // --- CONTINUE BUTTON ---
-        JButton ok = new JButton("Continue");
-        ok.addActionListener((ActionEvent e) -> {
-            selectedDrive = robotCentricBtn.isSelected()
+        // --- Continue Button ---
+        JButton okButton = new JButton("Continue");
+        okButton.addActionListener((ActionEvent e) -> {
+            // Capture selections
+            selectedDriveMode = robotBtn.isSelected()
                     ? DriveMode.ROBOT_CENTRIC
                     : DriveMode.FIELD_CENTRIC;
             selectedBackground = darkBtn.isSelected()
@@ -79,22 +80,26 @@ public class SettingsDialog extends JDialog {
                     : Background.FIELD_INTO_THE_DEEP_JUICE_LIGHT;
             selectedAlliance = redBtn.isSelected()
                     ? Alliance.RED
-                    : Alliance.BlUE;
+                    : Alliance.BLUE;
             setVisible(false);
         });
-        JPanel south = new JPanel();
-        south.add(ok);
-        add(south, BorderLayout.SOUTH);
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(okButton);
+        add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    /** @return the drive type the user selected */
+    /** @return the drive mode chosen by the user */
     public DriveMode getSelectedDriveMode() {
-        return selectedDrive;
+        return selectedDriveMode;
     }
-    /** @return the background the user selected */
+
+    /** @return the field background chosen by the user */
     public Background getSelectedBackground() {
         return selectedBackground;
     }
-    /** @return the selected alliance */
-    public Alliance getSelectedAlliance() { return selectedAlliance; }
+
+    /** @return the alliance chosen by the user */
+    public Alliance getSelectedAlliance() {
+        return selectedAlliance;
+    }
 }

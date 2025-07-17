@@ -1,119 +1,135 @@
 package com.chrislemoine.simulator.core;
 
 /**
- * Core data model representing the robot's pose and physical constraints.
- * Coordinates and dimensions are in inches; heading is in radians.
+ * Core data model representing the robot's pose (x, y, heading)
+ * and its dynamic state with acceleration-limited motion in three axes:
+ *   - Axial (forward/back)
+ *   - Lateral (strafe left/right)
+ *   - Yaw (rotation)
+ * All distances are in inches and angles in radians
  */
 public class SimBot {
-    private double x, y, heading;          // Pose: inches, inches, radians
-    private double maxVel, maxAccel;       // Linear limits (inches/sec, inches/sec^2)
-    private double maxAngVel, maxAngAccel; // Angular limits (rad/sec, rad/sec^2)
-    private double width, length;          // Robot footprint
+    // --- Pose (field coordinates) ---
+    private double x;       // X position (+right)
+    private double y;       // Y position (+forward)
+    private double heading; // Rotation: 0 = +X axis, pi/2 = +Y axis
 
-    // --- dynamic state ---
-    private double velX = 0.0, velY = 0.0;             // current linear velocities
-    private double targetVelX = 0.0, targetVelY = 0.0; // desired linear velocities
-    private double angVel = 0.0;                       // current angular velocity
-    private double targetAngVel = 0.0;                 // desired angular velocity
+    // --- Physical limits ---
+    private double maxSpeed;        // Max linear speed (inches/sec)
+    private double maxAccel;        // Max linear acceleration (inches/sec^2)
+    private double maxYawSpeed;     // Max rotational speed (rad/sec)
+    private double maxYawAccel;     // Max rotational acceleration (rad/sec^2)
+    private double width, length;   // Robot footprint (inches)
+
+    // --- Dynamic state ---
+    private double axialVel = 0.0;      // Current forward velocity
+    private double lateralVel = 0.0;    // Current strafe velocity
+    private double yawVel = 0.0;        // Current rotational velocity
+
+    private double targetAxialVel = 0.0;    // Desired forward velocity
+    private double targetLateralVel = 0.0;  // Desired strafe velocity
+    private double targetYawVel = 0.0;      // Desired rotational velocity
 
     /**
      * @param x           initial X position (inches)
      * @param y           initial Y position (inches)
      * @param heading     initial heading (radians)
-     * @param maxVel      maximum linear velocity (inches/sec)
+     * @param maxSpeed    maximum linear velocity (inches/sec)
      * @param maxAccel    maximum linear acceleration (inches/sec^2)
-     * @param maxAngVel   maximum angular velocity (rad/sec)
-     * @param maxAngAccel maximum angular acceleration (inches/sec^2)
+     * @param maxYawVel   maximum angular velocity (rad/sec)
+     * @param maxYawAccel maximum angular acceleration (inches/sec^2)
      * @param width       robots width (inches)
      * @param length      robots length (inches)
      */
     public SimBot(double x, double y, double heading,
-                  double maxVel, double maxAccel,
-                  double maxAngVel, double maxAngAccel,
+                  double maxSpeed, double maxAccel,
+                  double maxYawVel, double maxYawAccel,
                   double width, double length) {
-        this.x           = x;
-        this.y           = y;
-        this.heading     = heading;
-        this.maxVel      = maxVel;
-        this.maxAccel    = maxAccel;
-        this.maxAngVel   = maxAngVel;
-        this.maxAngAccel = maxAngAccel;
-        this.width       = width;
-        this.length      = length;
+        this.x = x;
+        this.y = y;
+        this.heading = heading;
+        this.maxSpeed = maxSpeed;
+        this.maxAccel = maxAccel;
+        this.maxYawSpeed = maxYawVel;
+        this.maxYawAccel = maxYawAccel;
+        this.width = width;
+        this.length = length;
     }
 
-    // Pose getters
-    public double getX()           { return x; }
-    public double getY()           { return y; }
-    public double getHeading()     { return heading; }
+    // --- Pose getters ---
+    public double getX() { return x; }
+    public double getY() { return y; }
+    public double getHeading() { return heading; }
 
-    // Constraint getters
-    public double getMaxVel()      { return maxVel; }
-    public double getMaxAccel()    { return maxAccel; }
-    public double getMaxAngVel()   { return  maxAngVel; }
-    public double getMaxAngAccel() { return maxAngAccel; }
+    // --- Limit getters ---
+    public double getMaxSpeed() { return maxSpeed; }
+    public double getMaxAccel() { return maxAccel; }
+    public double getMaxYawSpeed() { return maxYawSpeed; }
+    public double getMaxYawAccel() { return maxYawAccel; }
 
-    // Dimension getters
-    public double getWidth()       { return width; }
-    public double getLength()      { return length; }
+    // --- Dimension getters ---
+    public double getWidth() { return width; }
+    public double getLength() { return length; }
 
     /**
-     * Sets desired linear velocity.
-     * @param vx strafe velocity (inches/sec)
-     * @param vy drive velocity (inches/sec)
+     * Set desired linear speed.
+     * @param axialSpeed     forward/backward speed (inches/sec): +forward, -reverse
+     * @param lateralSpeed   strafe speed (inches/sec): +right, -left
      */
-    public void setTargetVel(double vx, double vy) {
-        this.targetVelX = clamp(vx, -maxVel, maxVel);
-        this.targetVelY = clamp(vy, -maxVel, maxVel);
+    public void setTargetVel(double axialSpeed, double lateralSpeed) {
+        this.targetAxialVel = clamp(axialSpeed, -maxSpeed, maxSpeed);
+        this.targetLateralVel = clamp(lateralSpeed, -maxSpeed, maxSpeed);
     }
 
     /**
-     * Sets desired angular velocity.
-     * @param av angular velocity (rad/sec)
+     * Set desired rotational speed.
+     * @param yawSpeed rotational speed (rad/sec): +CCW, -CW
      */
-    public void setTargetAngVel(double av) {
-        this.targetAngVel = clamp(av, -maxAngVel, maxAngVel);
+    public void setTargetYawVel(double yawSpeed) {
+        this.targetYawVel = clamp(yawSpeed, -maxYawSpeed, maxYawSpeed);
     }
 
     /**
-     * Updates the robot's dynamic state and pose with ramping
-     * @param dt time step (seconds)
+     * Update position and velocities over time dt, respecting acceleration limits.
+     * @param dt time step in seconds
      */
     public void update (double dt) {
-        double dvx = targetVelX - velX;
-        double maxDV = maxAccel * dt;
-        velX += clamp(dvx, -maxDV, maxDV);
+        // --- Linear acceleration ramp ---
+        double dAxial = targetAxialVel - axialVel;
+        axialVel += clamp(dAxial, -maxAccel * dt, maxAccel * dt);
 
-        double dvy = targetVelY - velY;
-        velY += clamp(dvy, -maxDV, maxDV);
+        double dLat = targetLateralVel - lateralVel;
+        lateralVel += clamp(dLat, -maxAccel * dt, maxAccel * dt);
 
-        double dav = targetAngVel - angVel;
-        double maxDA = maxAngAccel * dt;
-        angVel += clamp(dav, -maxDA, maxDA);
+        // --- Rotational acceleration ramp ---
+        double dYaw = targetYawVel - yawVel;
+        yawVel += clamp(dYaw, -maxYawAccel * dt, maxYawAccel * dt);
 
-        double forward = velY * dt;
-        double strafe = velX * dt;
+        // --- Integrate position in field frame ---
+        double forward = axialVel * dt;
+        double strafe = lateralVel * dt;
         double cosH = Math.cos(heading);
         double sinH = Math.sin(heading);
-        x += forward * cosH + strafe * sinH;
-        y += forward * sinH - strafe *cosH;
+        x += forward * cosH - strafe * sinH;
+        y += forward * sinH + strafe *cosH;
 
-        heading += angVel * dt;
+        // --- Integrate heading ---
+        heading += yawVel * dt;
     }
 
     /**
-     * Clamp helper
+     * Constrain v to [min. max]
      */
     private double clamp(double v, double min, double max) {
         return Math.max(min, Math.min(max, v));
     }
 
     /**
-     * Directly set the robot's pose.
+     * Instantly set pose (teleport)
      */
     public void setPose(double x, double y, double heading) {
-        this.x       = x;
-        this.y       = y;
+        this.x = x;
+        this.y = y;
         this.heading = heading;
     }
 }
