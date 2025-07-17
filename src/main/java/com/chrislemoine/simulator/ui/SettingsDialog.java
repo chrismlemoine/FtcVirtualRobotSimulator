@@ -1,21 +1,19 @@
 package com.chrislemoine.simulator.ui;
 
-import com.chrislemoine.simulator.core.DriveType;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 
 /**
  * Modal dialog for selecting simulation settings:
- * <p> - Drive type (MECANUM or TANK)</p>
+ * <p> - Drive type (ROBOT_CENTRIC or FIELD_CENTRIC)</p>
  * <p> - Field background (Dark or Light)</p>
  * <p> - Alliance color (Red or Blue)</p>
  *
  * Blocks until the user clicks "Continue," then exposes the selections via getters.
  */
 public class SettingsDialog extends JDialog {
-    private DriveType selectedDrive = DriveType.MECANUM;
+    private DriveMode selectedDrive = DriveMode.ROBOT_CENTRIC;
     private Background selectedBackground = Background.FIELD_INTO_THE_DEEP_JUICE_DARK;
     private Alliance selectedAlliance = Alliance.RED;
 
@@ -30,16 +28,16 @@ public class SettingsDialog extends JDialog {
         setLocationRelativeTo(parent);
 
 
-        // --- DRIVE TYPE PANEL ---
-        JRadioButton mecBtn = new JRadioButton("Mecanum Drive", true);
-        JRadioButton tankBtn = new JRadioButton("Tank Drive");
-        ButtonGroup driveGroup = new ButtonGroup();
-        driveGroup.add(mecBtn);
-        driveGroup.add(tankBtn);
-        JPanel drivePanel = new JPanel(new GridLayout(2, 1));
-        drivePanel.setBorder(BorderFactory.createTitledBorder("Drive Type"));
-        drivePanel.add(mecBtn);
-        drivePanel.add(tankBtn);
+        // --- DRIVE MODE PANEL ---
+        JRadioButton robotCentricBtn = new JRadioButton("Robot-centric", true);
+        JRadioButton fieldCentricBtn = new JRadioButton("Field-centric");
+        ButtonGroup modeGroup = new ButtonGroup();
+        modeGroup.add(robotCentricBtn);
+        modeGroup.add(fieldCentricBtn);
+        JPanel modePanel = new JPanel(new GridLayout(2, 1));
+        modePanel.setBorder(BorderFactory.createTitledBorder("Drive Mode"));
+        modePanel.add(robotCentricBtn);
+        modePanel.add(fieldCentricBtn);
 
         // --- BACKGROUND OPTIONS ---
         JRadioButton darkBtn = new JRadioButton("Juice Dark", true);
@@ -65,7 +63,7 @@ public class SettingsDialog extends JDialog {
 
         // Combine both panels side by side
         JPanel center = new JPanel(new GridLayout(1, 2, 10, 10));
-        center.add(drivePanel);
+        center.add(modePanel);
         center.add(bgPanel);
         center.add(alliancePanel);
         add(center, BorderLayout.CENTER);
@@ -73,7 +71,9 @@ public class SettingsDialog extends JDialog {
         // --- CONTINUE BUTTON ---
         JButton ok = new JButton("Continue");
         ok.addActionListener((ActionEvent e) -> {
-            selectedDrive = mecBtn.isSelected() ? DriveType.MECANUM : DriveType.TANK;
+            selectedDrive = robotCentricBtn.isSelected()
+                    ? DriveMode.ROBOT_CENTRIC
+                    : DriveMode.FIELD_CENTRIC;
             selectedBackground = darkBtn.isSelected()
                     ? Background.FIELD_INTO_THE_DEEP_JUICE_DARK
                     : Background.FIELD_INTO_THE_DEEP_JUICE_LIGHT;
@@ -88,7 +88,7 @@ public class SettingsDialog extends JDialog {
     }
 
     /** @return the drive type the user selected */
-    public DriveType getSelectedDrive() {
+    public DriveMode getSelectedDriveMode() {
         return selectedDrive;
     }
     /** @return the background the user selected */
