@@ -1,57 +1,71 @@
 package com.chrislemoine.simulator.core;
 
 /**
- * Core data model representing the robot's pose (x, y, heading)
- * and its dynamic state with acceleration-limited motion in three axes:
- *   - Axial (forward/back)
- *   - Lateral (strafe left/right)
- *   - Yaw (rotation)
- * All distances are in inches and angles in radians
+ * Represents a robot on the FTC field with independent, acceleration-limited motion
+ * in three axes:
+ * <ul>
+ *   <li>Axial (forward/backward)</li>
+ *   <li>Lateral (strafe left/right)</li>
+ *   <li>Yaw (rotation)</li>
+ * </ul>
+ * All distances are in inches, angles in radians, and velocities in their respective units per second.
  */
 public class SimBot {
-    // --- Pose (field coordinates) ---
-    private double x;       // X position (+right)
-    private double y;       // Y position (+forward)
-    private double heading; // Rotation: 0 = +X axis, pi/2 = +Y axis
+    // --- Pose ---
+    private double x;                 // Field X coordinate (+right)
+    private double y;                 // Field Y coordinate (+forward)
+    private double heading;           // Orientation: 0=+X axis, +π/2=+Y axis
 
-    // --- Physical limits ---
-    private double maxSpeed;        // Max linear speed (inches/sec)
-    private double maxAccel;        // Max linear acceleration (inches/sec^2)
-    private double maxYawSpeed;     // Max rotational speed (rad/sec)
-    private double maxYawAccel;     // Max rotational acceleration (rad/sec^2)
-    private double width, length;   // Robot footprint (inches)
+    // --- Motion limits (final) ---
+    private final double maxSpeed;        // inches/sec
+    private final double maxAccel;        // inches/sec^2
+    private final double maxBrakeAccel;   // inches/sec^2 when decelerating
+
+    private final double maxYawSpeed;     // rad/sec
+    private final double maxYawAccel;     // rad/sec^2
+    private final double maxBrakeYaw;     // rad/sec^2 when decelerating yaw
+
+    // Robot footprint (inches)
+    private final double width;
+    private final double length;
 
     // --- Dynamic state ---
-    private double axialVel = 0.0;      // Current forward velocity
-    private double lateralVel = 0.0;    // Current strafe velocity
-    private double yawVel = 0.0;        // Current rotational velocity
+    private double axialVel = 0.0;
+    private double lateralVel = 0.0;
+    private double yawVel = 0.0;
 
-    private double targetAxialVel = 0.0;    // Desired forward velocity
-    private double targetLateralVel = 0.0;  // Desired strafe velocity
-    private double targetYawVel = 0.0;      // Desired rotational velocity
+    // --- Target speeds ---
+    private double targetAxial = 0.0;
+    private double targetLateral = 0.0;
+    private double targetYaw = 0.0;
 
     /**
-     * @param x           initial X position (inches)
-     * @param y           initial Y position (inches)
-     * @param heading     initial heading (radians)
-     * @param maxSpeed    maximum linear velocity (inches/sec)
-     * @param maxAccel    maximum linear acceleration (inches/sec^2)
-     * @param maxYawVel   maximum angular velocity (rad/sec)
-     * @param maxYawAccel maximum angular acceleration (inches/sec^2)
-     * @param width       robots width (inches)
-     * @param length      robots length (inches)
+     * Constructs a SimBot with full motion constraints.
+     * @param x               initial X (inches)
+     * @param y               initial Y (inches)
+     * @param heading         initial heading (radians)
+     * @param maxSpeed        max linear speed (inches/sec)
+     * @param maxAccel        max linear acceleration (inches/sec^2)
+     * @param maxBrakeAccel   max linear deceleration (inches/sec^2)
+     * @param maxYawSpeed     max rotational speed (rad/sec)
+     * @param maxYawAccel     max rotational acceleration (rad/sec^2)
+     * @param maxBrakeYaw     max rotational deceleration (rad/sec^2)
+     * @param width           robot width (inches)
+     * @param length          robot length (inches)
      */
     public SimBot(double x, double y, double heading,
-                  double maxSpeed, double maxAccel,
-                  double maxYawVel, double maxYawAccel,
+                  double maxSpeed, double maxAccel, double maxBrakeAccel,
+                  double maxYawSpeed, double maxYawAccel, double maxBrakeYaw,
                   double width, double length) {
         this.x = x;
         this.y = y;
         this.heading = heading;
         this.maxSpeed = maxSpeed;
         this.maxAccel = maxAccel;
-        this.maxYawSpeed = maxYawVel;
+        this.maxBrakeAccel = maxBrakeAccel;
+        this.maxYawSpeed = maxYawSpeed;
         this.maxYawAccel = maxYawAccel;
+        this.maxBrakeYaw = maxBrakeYaw;
         this.width = width;
         this.length = length;
     }
@@ -61,75 +75,83 @@ public class SimBot {
     public double getY() { return y; }
     public double getHeading() { return heading; }
 
-    // --- Limit getters ---
+    // --- Motion limit getters ---
     public double getMaxSpeed() { return maxSpeed; }
     public double getMaxAccel() { return maxAccel; }
+    public double getMaxBrakeAccel() { return maxBrakeAccel; }
     public double getMaxYawSpeed() { return maxYawSpeed; }
     public double getMaxYawAccel() { return maxYawAccel; }
+    public double getMaxBrakeYaw() { return maxBrakeYaw; }
 
     // --- Dimension getters ---
     public double getWidth() { return width; }
     public double getLength() { return length; }
 
     /**
-     * Set desired linear speed.
-     * @param axialSpeed     forward/backward speed (inches/sec): +forward, -reverse
-     * @param lateralSpeed   strafe speed (inches/sec): +right, -left
+     * Sets the target forward speed.
+     * @param speed desired axial velocity (inches/sec)
      */
-    public void setTargetVel(double axialSpeed, double lateralSpeed) {
-        this.targetAxialVel = clamp(axialSpeed, -maxSpeed, maxSpeed);
-        this.targetLateralVel = clamp(lateralSpeed, -maxSpeed, maxSpeed);
+    public void setTargetAxial(double speed) {
+        this.targetAxial = clamp(speed, -maxSpeed, maxSpeed);
     }
 
     /**
-     * Set desired rotational speed.
-     * @param yawSpeed rotational speed (rad/sec): +CCW, -CW
+     * Sets the target strafe speed.
+     * @param speed desired lateral velocity (inches/sec)
      */
-    public void setTargetYawVel(double yawSpeed) {
-        this.targetYawVel = clamp(yawSpeed, -maxYawSpeed, maxYawSpeed);
+    public void setTargetLateral(double speed) {
+        this.targetLateral = clamp(speed, -maxSpeed, maxSpeed);
     }
 
     /**
-     * Update position and velocities over time dt, respecting acceleration limits.
-     * @param dt time step in seconds
+     * Sets the target yaw speed.
+     * @param speed desired rotational velocity (rad/sec)
      */
-    public void update (double dt) {
-        // --- Linear acceleration ramp ---
-        double dAxial = targetAxialVel - axialVel;
-        axialVel += clamp(dAxial, -maxAccel * dt, maxAccel * dt);
+    public void setTargetYaw(double speed) {
+        this.targetYaw = clamp(speed, -maxYawSpeed, maxYawSpeed);
+    }
 
-        double dLat = targetLateralVel - lateralVel;
-        lateralVel += clamp(dLat, -maxAccel * dt, maxAccel * dt);
+    /**
+     * Advances the robot state by dt seconds, applying accel/brake logic.
+     * @param dt time increment in seconds
+     */
+    public void update(double dt) {
+        // Linear: axial
+        double dAx = targetAxial - axialVel;
+        double capAx = (Math.signum(dAx) == Math.signum(targetAxial)) ? maxAccel : maxBrakeAccel;
+        axialVel += clamp(dAx, -capAx * dt, capAx * dt);
 
-        // --- Rotational acceleration ramp ---
-        double dYaw = targetYawVel - yawVel;
-        yawVel += clamp(dYaw, -maxYawAccel * dt, maxYawAccel * dt);
+        // Linear: lateral
+        double dLat = targetLateral - lateralVel;
+        double capLat = (Math.signum(dLat) == Math.signum(targetLateral)) ? maxAccel : maxBrakeAccel;
+        lateralVel += clamp(dLat, -capLat * dt, capLat * dt);
 
-        // --- Integrate position in field frame ---
-        double forward = axialVel * dt;
-        double strafe = lateralVel * dt;
-        double cosH = Math.cos(heading);
-        double sinH = Math.sin(heading);
-        x += forward * cosH - strafe * sinH;
-        y += forward * sinH + strafe *cosH;
+        // Rotational: yaw
+        double dYaw = targetYaw - yawVel;
+        double capYaw = (Math.signum(dYaw) == Math.signum(targetYaw)) ? maxYawAccel : maxBrakeYaw;
+        yawVel += clamp(dYaw, -capYaw * dt, capYaw * dt);
 
-        // --- Integrate heading ---
+        // Integrate pose (field frame)
+        double dx = axialVel * dt;
+        double dy = lateralVel * dt;
+        double cosH = Math.cos(heading), sinH = Math.sin(heading);
+        x += dx * cosH - dy * sinH;
+        y += dx * sinH + dy * cosH;
+
+        // Integrate heading
         heading += yawVel * dt;
     }
 
     /**
-     * Constrain v to [min. max]
+     * Instantly stops all motion (zero velocities and targets).
      */
-    private double clamp(double v, double min, double max) {
-        return Math.max(min, Math.min(max, v));
+    public void stop() {
+        axialVel = lateralVel = yawVel = 0;
+        targetAxial = targetLateral = targetYaw = 0;
     }
 
-    /**
-     * Instantly set pose (teleport)
-     */
-    public void setPose(double x, double y, double heading) {
-        this.x = x;
-        this.y = y;
-        this.heading = heading;
+    // --- Utility ---
+    private double clamp(double v, double min, double max) {
+        return Math.max(min, Math.min(max, v));
     }
 }

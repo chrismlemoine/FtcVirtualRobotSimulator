@@ -1,34 +1,37 @@
 package com.chrislemoine.simulator.input;
 
 /**
- * Abstraction for any drive input source (keyboard, gamepad, etc.).
- * <p>Poll this controller once per simulation tick, then query:</p>
+ * Defines a generic drive input source for the SimBot.
+ * <p>
+ * Call {@link #poll()} once per frame to refresh input state,
+ * then query the axes:
+ * </p>
  * <ul>
- *   <li>{@link #getAxial()} for forward/back input (+1 = full forward, -1 = full reverse)</li>
- *   <li>{@link #getLateral()} for strafe left/right (+1 = full right, -1 = full left)</li>
- *   <li>{@link #getYaw()} for rotation (+1 = full counterclockwise, -1 = full clockwise)</li>
+ *   <li>{@link #getAxial()}: forward/backward input (+1 = full forward, -1 = full reverse)</li>
+ *   <li>{@link #getLateral()}: strafe input (+1 = full right, -1 = full left)</li>
+ *   <li>{@link #getYaw()}: rotational input (+1 = full counterclockwise, -1 = full clockwise)</li>
  * </ul>
- * All values are in the range [-1, 1], representing full input in that axis.
+ * All return values are in the range [-1, 1].
  */
 public interface DriveController {
     /**
-     * Refresh internal input state (poll hardware, process events, etc.).
-     * Must be called once each frame before querying axis getters.
+     * Refreshes the internal input state (poll hardware or process events).
+     * Must be invoked before reading any axis getters each frame.
      */
     void poll();
 
     /**
-     * @return forward/backward drive input: +1 = full forward, -1 = full reverse
+     * @return axial (forward/backward) input: +1 = full forward, -1 = full reverse
      */
     double getAxial();
 
     /**
-     * @return strafe input: +1 = full right, -1 = full left
+     * @return lateral (strafe left/right) input: +1 = full right, -1 = full left
      */
     double getLateral();
 
     /**
-     * @return rotational input (yaw): +1 = full counterclockwise, -1 = full clockwise
+     * @return yaw (rotational) input: +1 = full counterclockwise, -1 = full clockwise
      */
     double getYaw();
 }

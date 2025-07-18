@@ -1,7 +1,9 @@
 <component name="libraryTable">
   <library name="java">
     <CLASSES />
-    <JAVADOC />
+    <JAVADOC>
+      <root url="https://repo1.maven.org/maven2/com/studiohartman/jamepad/jamepad/1.4.0/jamepad-1.4.0.jar" />
+    </JAVADOC>
     <SOURCES />
   </library>
 </component>
